@@ -32,13 +32,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #region Class Documentation
 /************************************************************************************************************
 Class Name:     WeakDictionary.cs
-Namespace:      Com.EpixCode.Util.WeakReference
-Type:           Util
+Namespace:      Com.EpixCode.Util.WeakReference.WeakDictionary
+Type:           Util / Collection
 Definition:
-                TODO
+                [WeakDictionary] is an alternative to [ConditionalWeakTable] (Only available in .NET Framework 4 +) 
+                for Unity. It gives the ability to index a dictionary with object references that will automatically 
+                be released if they are no longer used.
 Example:
-                TODO
-                
+                WeakDictionary<object, string> myWeakDictionary = new WeakDictionary<object, string>();
+                myWeakDictionary.Add(myObject, "myString");
 ************************************************************************************************************/
 #endregion
 
@@ -51,13 +53,18 @@ using System.Collections.Generic;
 
 namespace Com.EpixCode.Util.WeakReference.WeakDictionary
 {
-    public class WeakDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>, IDictionary
+    public class WeakDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>, ICollection<KeyValuePair<TKey, TValue>>, IDictionary<TKey, TValue>, IEnumerable
     {
+        /*********************************************************
+        * Member Variables
+        *********************************************************/
         private IDictionary<int, WeakKeyPair<TKey, TValue>> _weakRefDict = new Dictionary<int, WeakKeyPair<TKey, TValue>>();
         private IDictionary<TKey, TValue> _hardRefDict = new Dictionary<TKey, TValue>();
-
-        public bool IsAutoClean { get; set; }
-
+        private bool _isAutoCean = true;
+        
+        /*********************************************************
+        * Accessors / Mutators
+        *********************************************************/
         public int Count
         {
             get
@@ -67,9 +74,102 @@ namespace Com.EpixCode.Util.WeakReference.WeakDictionary
             }
         }
 
+        public bool IsReadOnly
+        {
+            get 
+            { 
+                return (_weakRefDict.IsReadOnly && _hardRefDict.IsReadOnly); 
+            }
+        }
+
+        public ICollection<TKey> Keys
+        {
+            get
+            {
+                ICollection<TKey> keyList = new List<TKey>();
+                foreach (KeyValuePair<TKey, TValue> entry in this)
+                {
+                    keyList.Add(entry.Key);
+                }
+                return keyList;
+            }
+        }
+
+        public ICollection<TValue> Values
+        {
+            get
+            {
+                ICollection<TValue> valueList = new List<TValue>();
+                foreach (KeyValuePair<TKey, TValue> entry in this)
+                {
+                    valueList.Add(entry.Value);
+                }
+                return valueList;
+            }
+        }
+
+        public TValue this[TKey key]
+        {
+            get
+            {
+                TValue value = GetFromWeakReferenceDict(key);
+                if (object.Equals(value, default(TValue)))
+                {
+                    value = GetFromHardReferenceDict(key);
+                }
+                return value;
+            }
+
+            set
+            {
+                if (!_hardRefDict.ContainsKey(key))
+                {
+                    int hashCodeKey = key.GetHashCode();
+                    if (_weakRefDict.ContainsKey(hashCodeKey))
+                    {
+                        WeakKeyPair<TKey, TValue> weakKeyPair = _weakRefDict[hashCodeKey];
+                        weakKeyPair.Value = value;
+                    }
+                    else
+                    {
+                        Debug.LogWarning("WeakDictionary - There is no entry for key [" + key + "].");
+                    }
+                }
+                else
+                {
+                    _hardRefDict[key] = value;
+                }
+            }
+        }
+
+        public bool IsAutoClean
+        {
+            get
+            {
+                return _isAutoCean;
+            }
+            set
+            {
+                _isAutoCean = value;
+            }
+        }
+
         /**********************************************************
-         * PUBLIC
-         *********************************************************/
+        * Explicit Methods
+        *********************************************************/
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return this.GetEnumerator();
+        }
+
+        bool IDictionary<TKey, TValue>.Remove(TKey key)
+        {
+            return Remove(key);
+        }
+
+        /**********************************************************
+        * Public Methods
+        *********************************************************/
         public void Add(TKey key, TValue value)
         {
             if (!AddToWeakReferenceDict(key, value))
@@ -85,15 +185,27 @@ namespace Com.EpixCode.Util.WeakReference.WeakDictionary
             }
         }
 
-        public void Remove(TKey key)
+        public void Add(KeyValuePair<TKey, TValue> item)
+        {
+            Add(item.Key, item.Value);
+        }
+
+        public bool Remove(TKey key)
         {
             if (!RemoveFromWeakReferenceDict(key))
             {
                 if (!RemoveFromHardReferenceDict(key))
                 {
                     Debug.LogWarning("WeakDictionary - The key [" + key + "] isn't registered!");
+                    return false;
                 }
             }
+            return true;
+        }
+
+        public bool Remove(KeyValuePair<TKey, TValue> item)
+        {
+            return Remove(item.Key);
         }
 
         public bool ContainsKey(TKey key)
@@ -107,6 +219,11 @@ namespace Com.EpixCode.Util.WeakReference.WeakDictionary
                 }
             }
             return true;
+        }
+
+        public bool Contains(KeyValuePair<TKey, TValue> item)
+        {
+            return ContainsKey(item.Key);
         }
 
         public void Clear()
@@ -171,7 +288,6 @@ namespace Com.EpixCode.Util.WeakReference.WeakDictionary
                 WeakKeyPair<TKey, TValue> weakKeyPair = _weakRefDict[hashCodeKey];
                 if (!weakKeyPair.IsAlive)
                 {
-                    Debug.LogError("[KEV] - FOUND DEAD KEY");
                     weakKeyPair.Dispose();
                     _weakRefDict.Remove(hashCodeKey);
                     success = true;
@@ -181,43 +297,55 @@ namespace Com.EpixCode.Util.WeakReference.WeakDictionary
             return success;
         }
 
-        public TValue this[TKey key]
+        public bool TryGetValue(TKey key, out TValue value)
         {
-            get
+            if (ContainsKey(key))
             {
-                TValue value = GetFromWeakReferenceDict(key);
-                if (object.Equals(value, default(TValue)))
-                {
-                    value = GetFromHardReferenceDict(key);
-                }
-                return value;
+                value = this[key];
+                return true;
             }
 
-            private set
+            value = default(TValue);
+            return false;
+        }
+
+        public void CopyTo(KeyValuePair<TKey, TValue>[] array, int index)
+        {
+            foreach (KeyValuePair<int, WeakKeyPair<TKey, TValue>> entry in _weakRefDict)
             {
-                if(!_hardRefDict.ContainsKey(key))
-                {
-                    int hashCodeKey = key.GetHashCode();
-                    if (_weakRefDict.ContainsKey(hashCodeKey))
-                    {
-                        WeakKeyPair<TKey, TValue> weakKeyPair = _weakRefDict[hashCodeKey];
-                        weakKeyPair.Value = value;
-                    }
-                    else
-                    {
-                        Debug.LogWarning("WeakDictionary - There is no entry for key [" + key + "].");
-                    }
-                }
-                else
-                {
-                    _hardRefDict[key] = value;
-                }
+                KeyValuePair<TKey, TValue> keyValuePair = new KeyValuePair<TKey, TValue>(entry.Value.Key, entry.Value.Value);
+                array.SetValue(keyValuePair, index);
+                index = index + 1;
+            }
+
+            foreach (KeyValuePair<TKey, TValue> entry in _hardRefDict)
+            {
+                array.SetValue(entry, index);
+                index = index + 1;
+            }
+        }
+
+        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
+        {
+            if (IsAutoClean)
+            {
+                Clean();
+            }
+
+            foreach (KeyValuePair<int, WeakKeyPair<TKey, TValue>> entry in _weakRefDict)
+            {
+                yield return new KeyValuePair<TKey, TValue>(entry.Value.Key, entry.Value.Value);
+            }
+
+            foreach (KeyValuePair<TKey, TValue> entry in _hardRefDict)
+            {
+                yield return entry;
             }
         }
 
         /**********************************************************
-         * PRIVATE
-         *********************************************************/
+        * Private Methods
+        *********************************************************/
         private bool AddToWeakReferenceDict(TKey key, TValue value)
         {
             int hashCodeKey = key.GetHashCode();
@@ -314,29 +442,6 @@ namespace Com.EpixCode.Util.WeakReference.WeakDictionary
             }
 
             return default(TValue);
-        }
-
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
-        {
-            if (IsAutoClean)
-            {
-                Clean();
-            }
-
-            foreach (KeyValuePair<int, WeakKeyPair<TKey, TValue>> entry in _weakRefDict)
-            {
-                yield return new KeyValuePair<TKey, TValue>(entry.Value.Key, entry.Value.Value);
-            }
-
-            foreach (KeyValuePair<TKey, TValue> entry in _hardRefDict)
-            {
-                yield return entry;
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return this.GetEnumerator();
         }
     }
 }

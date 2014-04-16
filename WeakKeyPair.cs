@@ -32,12 +32,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #region Class Documentation
 /************************************************************************************************************
 Class Name:     WeakKeyPair.cs
-Namespace:      Com.EpixCode.Util.WeakReference
+Namespace:      Com.EpixCode.Util.WeakReference.WeakDictionary
 Type:           Util
 Definition:
-                TODO
+                [WeakKeyPair] is a [KeyValuePair] that encapsulate the key into a [WeakReference] . By doing so, 
+                the key could be release from memory if it’s no longer used by any other reference. [WeakKeyPair] 
+                is mostly used by [WeakDictionary] (Implementation from EpixCode).
 Example:
-                TODO
+                WeakKeyPair<object, string> myWeakKeyPair = new WeakKeyPair<object, string>(myObject, "myString");
+                if(myWeakKeyPair.IsAlive)
+                {
+                    Debug.Log(myWeakKeyPair.Key + " = " + myWeakKeyPair.Value);
+                }
+                else
+                {
+                    Debug.Log(myWeakKeyPair + " content has been relesed from memory!");
+                }
                 
 ************************************************************************************************************/
 #endregion
@@ -51,6 +61,15 @@ namespace Com.EpixCode.Util.WeakReference.WeakDictionary
 {
     public class WeakKeyPair<TKey, TValue> : IDisposable
     {
+        /*********************************************************
+        * Member Variables
+        *********************************************************/
+        private System.WeakReference _keyWeakRef;
+        private TValue _valueRef;
+
+        /*********************************************************
+        * Accessors / Mutators
+        *********************************************************/
         public TKey Key
         {
             get
@@ -58,6 +77,7 @@ namespace Com.EpixCode.Util.WeakReference.WeakDictionary
                 return (TKey)_keyWeakRef.Target;
             }
         }
+
         public TValue Value
         {
             get
@@ -69,6 +89,7 @@ namespace Com.EpixCode.Util.WeakReference.WeakDictionary
                 _valueRef = value;
             }
         }
+
         public bool IsAlive
         {
             get
@@ -76,10 +97,10 @@ namespace Com.EpixCode.Util.WeakReference.WeakDictionary
                 return (bool)(_keyWeakRef != null && _keyWeakRef.IsAlive && !this.Key.Equals(null));
             }
         }
-
-        private System.WeakReference _keyWeakRef;
-        private TValue _valueRef;
-
+        
+        /**********************************************************
+        * Public Methods
+        *********************************************************/
         public WeakKeyPair(TKey key, TValue value)
         {
             _keyWeakRef = new System.WeakReference(key);
@@ -101,5 +122,9 @@ namespace Com.EpixCode.Util.WeakReference.WeakDictionary
             _keyWeakRef = null;
             _valueRef = default(TValue);
         }
+
+        /**********************************************************
+        * Private Methods
+        *********************************************************/
     }
 }
