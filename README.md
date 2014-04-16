@@ -1,4 +1,4 @@
-WeakDictionary
+WeakDictionary for Unity
 ==============
 
 Why creating a WeakDictionary implementation?
@@ -13,6 +13,10 @@ How should I use it?
 
 	WeakDictionary<object, string> myWeakDictionary = new WeakDictionary<object, string>();
     myWeakDictionary.Add(myObject, "myString");
+
+What are the supported platform?
+--------------
+**WeakDictionary** is mostly build for Unity. Because it is hardly based on the [*WeakReference*](http://msdn.microsoft.com/en-us/library/system.weakreference(v=vs.110).aspx) class, **WeakDictionary** could be use in any version of .NET over 1.1.
 
 How could I get more information?
 --------------
