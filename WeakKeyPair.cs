@@ -47,7 +47,7 @@ using System;
 using UnityEngine;
 #endregion
 
-namespace Com.EpixCode.Util.WeakReference
+namespace Com.EpixCode.Util.WeakReference.WeakDictionary
 {
     public class WeakKeyPair<TKey, TValue> : IDisposable
     {

@@ -31,7 +31,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 #region Class Documentation
 /************************************************************************************************************
-Class Name:     WeakKeyDictionary.cs
+Class Name:     WeakDictionary.cs
 Namespace:      Com.EpixCode.Util.WeakReference
 Type:           Util
 Definition:
@@ -49,9 +49,9 @@ using System.Collections;
 using System.Collections.Generic;
 #endregion
 
-namespace Com.EpixCode.Util.WeakReference
+namespace Com.EpixCode.Util.WeakReference.WeakDictionary
 {
-    public class WeakKeyDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
+    public class WeakDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>, IDictionary
     {
         private IDictionary<int, WeakKeyPair<TKey, TValue>> _weakRefDict = new Dictionary<int, WeakKeyPair<TKey, TValue>>();
         private IDictionary<TKey, TValue> _hardRefDict = new Dictionary<TKey, TValue>();
@@ -76,11 +76,11 @@ namespace Com.EpixCode.Util.WeakReference
             {
                 if (!AddToHardReferenceDict(key, value))
                 {
-                    Debug.LogWarning("WeakKeyDictionary - The key [" + key + "] is already registered!");
+                    Debug.LogWarning("WeakDictionary - The key [" + key + "] is already registered!");
                 }
                 else
                 {
-                    Debug.Log("WeakKeyDictionary - HashCode collision, The key [" + key + "] is hard referenced.");
+                    Debug.Log("WeakDictionary - HashCode collision, The key [" + key + "] is hard referenced.");
                 }
             }
         }
@@ -91,7 +91,7 @@ namespace Com.EpixCode.Util.WeakReference
             {
                 if (!RemoveFromHardReferenceDict(key))
                 {
-                    Debug.LogWarning("WeakKeyDictionary - The key [" + key + "] isn't registered!");
+                    Debug.LogWarning("WeakDictionary - The key [" + key + "] isn't registered!");
                 }
             }
         }
@@ -205,7 +205,7 @@ namespace Com.EpixCode.Util.WeakReference
                     }
                     else
                     {
-                        Debug.LogWarning("WeakKeyDictionary - There is no entry for key [" + key + "].");
+                        Debug.LogWarning("WeakDictionary - There is no entry for key [" + key + "].");
                     }
                 }
                 else
